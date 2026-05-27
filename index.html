@@ -214,8 +214,8 @@ nav button.active::after{
       <div class="plan-header">
         <div class="plan-name">1 месяц</div>
         <div>
-          <div class="plan-price">149 <small>₽</small></div>
-          <div class="plan-per">149 ₽/мес</div>
+          <div class="plan-price">199 <small>₽</small></div>
+          <div class="plan-per">199 ₽/мес</div>
         </div>
       </div>
       <div class="plan-badge">базовый</div>
@@ -225,37 +225,37 @@ nav button.active::after{
       <div class="plan-header">
         <div class="plan-name">3 месяца</div>
         <div>
-          <div class="plan-price">399 <small>₽</small></div>
-          <div class="plan-per">133 ₽/мес</div>
+          <div class="plan-price">499 <small>₽</small></div>
+          <div class="plan-per">166 ₽/мес</div>
         </div>
       </div>
-      <div class="plan-badge">−11%</div>
+      <div class="plan-badge">−17%</div>
     </div>
 
     <div class="plan-card card selected" data-key="6m" onclick="selectPlan(this)">
       <div class="plan-header">
         <div class="plan-name">6 месяцев</div>
         <div>
-          <div class="plan-price">699 <small>₽</small></div>
-          <div class="plan-per">117 ₽/мес</div>
+          <div class="plan-price">849 <small>₽</small></div>
+          <div class="plan-per">142 ₽/мес</div>
         </div>
       </div>
-      <div class="plan-badge best">best value −22%</div>
+      <div class="plan-badge best">best value −29%</div>
     </div>
 
     <div class="plan-card card" data-key="12m" onclick="selectPlan(this)">
       <div class="plan-header">
         <div class="plan-name">12 месяцев</div>
         <div>
-          <div class="plan-price">1199 <small>₽</small></div>
-          <div class="plan-per">100 ₽/мес</div>
+          <div class="plan-price">1499 <small>₽</small></div>
+          <div class="plan-per">125 ₽/мес</div>
         </div>
       </div>
-      <div class="plan-badge best">max save −33%</div>
+      <div class="plan-badge best">max save −37%</div>
     </div>
 
     <button class="btn" id="buyBtn" onclick="buyPlan()">
-      Оплатить 699 ₽
+      Оплатить 849 ₽
     </button>
 
   </section>
@@ -315,10 +315,10 @@ const USER = tg.initDataUnsafe?.user || {};
 
 // ── Plans data ────────────────────────────────────────────
 const PLANS = {
-  '1m' : {label:'1 месяц',   price:149,  days:30},
-  '3m' : {label:'3 месяца',  price:399,  days:90},
-  '6m' : {label:'6 месяцев', price:699,  days:180},
-  '12m': {label:'12 месяцев',price:1199, days:365},
+  '1m' : {label:'1 месяц',   price:199,  days:30},
+  '3m' : {label:'3 месяца',  price:499,  days:90},
+  '6m' : {label:'6 месяцев', price:849,  days:180},
+  '12m': {label:'12 месяцев',price:1499, days:365},
 };
 
 let selectedPlan = '6m';
@@ -344,9 +344,20 @@ function selectPlan(el) {
 
 // ── Buy ───────────────────────────────────────────────────
 function buyPlan() {
-  if (!USER.id) { showToast('Открой через Telegram'); return; }
-  tg.sendData(JSON.stringify({action:'buy', plan: selectedPlan}));
-  showToast('Запрос отправлен…');
+  if (!USER.id) {
+    // Открыто в браузере — редиректим в бота
+    window.location.href = 'https://t.me/my66vpn_bot';
+    return;
+  }
+  const btn = document.getElementById('buyBtn');
+  btn.disabled = true;
+  btn.textContent = 'Отправляю…';
+
+  // Передаём выбор плана боту → бот создаёт платёж и отправляет ссылку в чат
+  tg.sendData(JSON.stringify({ action: 'buy', plan: selectedPlan }));
+  // Показать тост перед закрытием
+  showToast('Ссылка на оплату придёт в чат!');
+  setTimeout(() => tg.close(), 1500);
 }
 
 // ── Profile ───────────────────────────────────────────────
