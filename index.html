@@ -342,12 +342,19 @@ function selectPlan(el) {
   el.classList.add('selected');
   selectedPlan = el.dataset.key;
   const p = PLANS[selectedPlan];
-  document.getElementById('buyBtn').textContent = `Оплатить ${p.price} ₽`;
+  // Сбрасываем кнопку в обычное состояние (если была ссылка — убираем)
+  const btn = document.getElementById('buyBtn');
+  btn.innerHTML = '';
+  btn.textContent = 'Оплатить ' + p.price + ' ₽';
+  btn.disabled = false;
 }
 
 // ── Buy ───────────────────────────────────────────────────
 async function buyPlan() {
   const btn = document.getElementById('buyBtn');
+
+  // Если кнопка уже стала ссылкой — ничего не делаем (ссылка откроется сама)
+  if (btn.querySelector('a')) return;
 
   // Если нет API URL — значит открыто не через бота
   if (!API_URL || !USER.id) {
@@ -360,7 +367,7 @@ async function buyPlan() {
 
   try {
     const resp = await fetch(
-      `${API_URL}/api/payment/create?tg_id=${USER.id}&plan=${selectedPlan}`
+      API_URL + '/api/payment/create?tg_id=' + USER.id + '&plan=' + selectedPlan
     );
     const data = await resp.json();
 
@@ -368,19 +375,21 @@ async function buyPlan() {
       throw new Error(data.error || 'no url');
     }
 
-    // Открываем страницу оплаты Freekassa прямо в WebApp
-    tg.openLink(data.url);
-    showToast('Переходим к оплате…');
+    // Превращаем кнопку в прямую ссылку.
+    // На iOS tg.openLink() закрывает мини-приложение — прямая <a href> не закрывает.
+    btn.disabled = false;
+    btn.innerHTML = '<a href="' + data.url + '" target="_blank" ' +
+      'style="color:#000;text-decoration:none;display:block;width:100%;padding:0">' +
+      '💳 ПЕРЕЙТИ К ОПЛАТЕ' +
+      '</a>';
+    showToast('Ссылка готова — нажми ещё раз');
 
   } catch (e) {
     showToast('Ошибка — попробуй через /buy в боте');
     console.error(e);
-  } finally {
-    setTimeout(() => {
-      btn.disabled = false;
-      const p = PLANS[selectedPlan];
-      btn.textContent = `Оплатить ${p.price} ₽`;
-    }, 2500);
+    btn.disabled = false;
+    const p = PLANS[selectedPlan];
+    btn.textContent = 'Оплатить ' + p.price + ' ₽';
   }
 }
 
@@ -389,9 +398,6 @@ async function loadProfile() {
   const container = document.getElementById('profileContent');
   container.innerHTML = '<div style="text-align:center;padding:32px 0"><span class="spinner"></span></div>';
 
-  // Запрашиваем данные у бота через sendData
-  // В реальном проекте — API-запрос на backend
-  // Здесь — заглушка с localStorage-кэшем
   const cached = localStorage.getItem('vpn_sub');
   if (cached) {
     renderProfile(JSON.parse(cached));
@@ -477,7 +483,6 @@ function showToast(msg) {
 }
 
 // ── WebApp data from bot ──────────────────────────────────
-// Слушаем сообщения от бота (можно расширить)
 tg.onEvent('viewportChanged', () => {});
 
 // Если бот передал данные через start_param — парсим подписку
