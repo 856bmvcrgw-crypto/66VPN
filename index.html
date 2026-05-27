@@ -295,7 +295,7 @@ nav button.active::after{
     </div>
 
     <button class="btn btn-ghost" onclick="openSupport()">
-      Написать в поддержку
+      Написать в поддержку @befirst66
     </button>
 
   </section>
@@ -344,20 +344,25 @@ function selectPlan(el) {
 
 // ── Buy ───────────────────────────────────────────────────
 function buyPlan() {
-  if (!USER.id) {
-    // Открыто в браузере — редиректим в бота
-    window.location.href = 'https://t.me/my66vpn_bot';
-    return;
-  }
   const btn = document.getElementById('buyBtn');
   btn.disabled = true;
-  btn.textContent = 'Отправляю…';
+  btn.textContent = 'Переходим…';
 
-  // Передаём выбор плана боту → бот создаёт платёж и отправляет ссылку в чат
-  tg.sendData(JSON.stringify({ action: 'buy', plan: selectedPlan }));
-  // Показать тост перед закрытием
-  showToast('Ссылка на оплату придёт в чат!');
-  setTimeout(() => tg.close(), 1500);
+  // Открываем бота с параметром выбранного тарифа
+  // Бот обработает /start buy_6m и пришлёт ссылку на оплату
+  const botUrl = `https://t.me/my66vpn_bot?start=buy_${selectedPlan}`;
+
+  if (tg && tg.openTelegramLink) {
+    tg.openTelegramLink(botUrl);
+  } else {
+    window.location.href = botUrl;
+  }
+
+  setTimeout(() => {
+    btn.disabled = false;
+    const p = PLANS[selectedPlan];
+    btn.textContent = `Оплатить ${p.price} ₽`;
+  }, 2000);
 }
 
 // ── Profile ───────────────────────────────────────────────
@@ -439,7 +444,7 @@ function copyKey() {
 
 // ── Support ───────────────────────────────────────────────
 function openSupport() {
-  tg.openTelegramLink('https://t.me/your_support_username');
+  tg.openTelegramLink('https://t.me/befirst66');
 }
 
 // ── Toast ─────────────────────────────────────────────────
