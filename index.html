@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>66VPN</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+/* ── Reset ───────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#000;color:#fff;overflow-x:hidden}
+
+/* ── Typography ─ Nothing-style dot-matrix feel ──────────── */
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+body{font-family:'Space Mono',monospace;font-size:13px;line-height:1.6;
+     -webkit-font-smoothing:antialiased}
+
+/* ── Scanline overlay (subtle) ───────────────────────────── */
+body::before{content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,.015) 2px,rgba(255,255,255,.015) 4px);
+  pointer-events:none;z-index:9999}
+
+/* ── Dot-matrix grid background ─────────────────────────── */
+body::after{content:'';position:fixed;inset:0;
+  background-image:radial-gradient(circle,rgba(255,255,255,.08) 1px,transparent 1px);
+  background-size:20px 20px;pointer-events:none;z-index:0}
+
+/* ── Layout ──────────────────────────────────────────────── */
+#app{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column}
+
+/* ── Header ──────────────────────────────────────────────── */
+header{
+  padding:20px 20px 0;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.logo{
+  font-size:22px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;
+  position:relative;
+}
+.logo span{color:#fff}
+.logo::after{
+  content:'';display:inline-block;width:7px;height:7px;
+  background:#fff;border-radius:50%;margin-left:4px;
+  animation:blink 1.4s step-end infinite;vertical-align:middle;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+.status-dot{
+  width:8px;height:8px;border-radius:50%;background:#fff;
+  box-shadow:0 0 6px #fff;
+  animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{box-shadow:0 0 4px #fff}50%{box-shadow:0 0 14px #fff}}
+
+/* ── Nav tabs ────────────────────────────────────────────── */
+nav{
+  display:flex;padding:18px 20px 0;gap:0;
+  border-bottom:1px solid rgba(255,255,255,.12);
+}
+nav button{
+  flex:1;background:none;border:none;color:rgba(255,255,255,.4);
+  font-family:inherit;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  padding:8px 0;cursor:pointer;transition:color .2s;position:relative;
+}
+nav button.active{color:#fff}
+nav button.active::after{
+  content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;
+  background:#fff;
+}
+
+/* ── Pages ───────────────────────────────────────────────── */
+.page{display:none;flex:1;padding:20px;flex-direction:column;gap:16px}
+.page.active{display:flex}
+
+/* ── Card ────────────────────────────────────────────────── */
+.card{
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:2px;
+  padding:16px;
+  position:relative;
+  background:rgba(255,255,255,.02);
+  transition:border-color .2s,background .2s;
+}
+.card:hover{border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.04)}
+.card::before{
+  content:'';position:absolute;top:-1px;left:16px;width:40px;height:1px;
+  background:#fff;
+}
+
+/* ── Plan card ───────────────────────────────────────────── */
+.plan-card{cursor:pointer}
+.plan-card.selected{
+  border-color:#fff;background:rgba(255,255,255,.07);
+}
+.plan-card.selected::before{width:100%;left:0}
+.plan-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.plan-name{font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.plan-price{font-size:18px;font-weight:700}
+.plan-price small{font-size:10px;font-weight:400;color:rgba(255,255,255,.5);margin-left:2px}
+.plan-per{font-size:10px;color:rgba(255,255,255,.4);text-align:right}
+.plan-badge{
+  display:inline-block;padding:2px 7px;
+  border:1px solid rgba(255,255,255,.3);
+  font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+  margin-top:8px;
+}
+.plan-badge.best{border-color:#fff;color:#fff}
+
+/* ── Section label ───────────────────────────────────────── */
+.section-label{
+  font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+  color:rgba(255,255,255,.4);margin-bottom:4px;
+}
+
+/* ── Button ──────────────────────────────────────────────── */
+.btn{
+  display:block;width:100%;
+  padding:14px;
+  background:#fff;color:#000;
+  border:none;border-radius:0;
+  font-family:inherit;font-size:12px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;
+  cursor:pointer;transition:opacity .15s;
+  position:relative;overflow:hidden;
+}
+.btn:active{opacity:.8}
+.btn::after{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,transparent,transparent 3px,rgba(0,0,0,.04) 3px,rgba(0,0,0,.04) 6px);
+}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn-ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.25)}
+.btn-ghost:active{background:rgba(255,255,255,.06)}
+
+/* ── Info row ────────────────────────────────────────────── */
+.info-row{display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.info-row:last-child{border:none}
+.info-key{color:rgba(255,255,255,.45);font-size:11px;letter-spacing:.06em}
+.info-val{font-size:12px;font-weight:700}
+
+/* ── VPN key block ───────────────────────────────────────── */
+.key-block{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);
+  padding:12px;word-break:break-all;font-size:10px;line-height:1.7;
+  color:rgba(255,255,255,.7);border-radius:2px;position:relative;
+}
+.copy-btn{
+  position:absolute;top:8px;right:8px;
+  background:rgba(255,255,255,.1);border:none;color:#fff;
+  font-family:inherit;font-size:9px;letter-spacing:.1em;
+  text-transform:uppercase;padding:4px 8px;cursor:pointer;
+}
+.copy-btn:active{background:rgba(255,255,255,.25)}
+
+/* ── Countdown / expiry bar ──────────────────────────────── */
+.expiry-bar-wrap{margin:4px 0 0}
+.expiry-bar-track{height:2px;background:rgba(255,255,255,.1);position:relative}
+.expiry-bar-fill{height:2px;background:#fff;transition:width 1s linear}
+
+/* ── Toast ───────────────────────────────────────────────── */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);
+  background:#fff;color:#000;padding:10px 20px;
+  font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  border-radius:0;opacity:0;transition:all .3s;z-index:10000;
+  white-space:nowrap;
+}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* ── Feature list ────────────────────────────────────────── */
+.feat-list{list-style:none;display:flex;flex-direction:column;gap:8px}
+.feat-list li{font-size:11px;color:rgba(255,255,255,.6);padding-left:14px;position:relative}
+.feat-list li::before{content:'//';position:absolute;left:0;color:rgba(255,255,255,.3)}
+
+/* ── Loading spinner ─────────────────────────────────────── */
+.spinner{
+  width:18px;height:18px;border:2px solid rgba(255,255,255,.2);
+  border-top-color:#fff;border-radius:50%;
+  animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── No-sub state ────────────────────────────────────────── */
+.empty-state{text-align:center;padding:32px 0;color:rgba(255,255,255,.35)}
+.empty-state .big{font-size:36px;margin-bottom:12px;opacity:.2}
+.empty-state p{font-size:11px;letter-spacing:.06em}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <header>
+    <div class="logo"><span>66VPN</span></div>
+    <div class="status-dot" id="statusDot"></div>
+  </header>
+
+  <!-- Nav -->
+  <nav>
+    <button class="active" data-page="shop" onclick="switchPage('shop',this)">Тарифы</button>
+    <button data-page="profile" onclick="switchPage('profile',this)">Профиль</button>
+    <button data-page="info" onclick="switchPage('info',this)">О сервисе</button>
+  </nav>
+
+  <!-- ═══ PAGE: SHOP ═══════════════════════════════════════ -->
+  <section id="page-shop" class="page active">
+
+    <div class="section-label">Выбери тариф</div>
+
+    <!-- Plan cards -->
+    <div class="plan-card card" data-key="1m" onclick="selectPlan(this)">
+      <div class="plan-header">
+        <div class="plan-name">1 месяц</div>
+        <div>
+          <div class="plan-price">149 <small>₽</small></div>
+          <div class="plan-per">149 ₽/мес</div>
+        </div>
+      </div>
+      <div class="plan-badge">базовый</div>
+    </div>
+
+    <div class="plan-card card" data-key="3m" onclick="selectPlan(this)">
+      <div class="plan-header">
+        <div class="plan-name">3 месяца</div>
+        <div>
+          <div class="plan-price">399 <small>₽</small></div>
+          <div class="plan-per">133 ₽/мес</div>
+        </div>
+      </div>
+      <div class="plan-badge">−11%</div>
+    </div>
+
+    <div class="plan-card card selected" data-key="6m" onclick="selectPlan(this)">
+      <div class="plan-header">
+        <div class="plan-name">6 месяцев</div>
+        <div>
+          <div class="plan-price">699 <small>₽</small></div>
+          <div class="plan-per">117 ₽/мес</div>
+        </div>
+      </div>
+      <div class="plan-badge best">best value −22%</div>
+    </div>
+
+    <div class="plan-card card" data-key="12m" onclick="selectPlan(this)">
+      <div class="plan-header">
+        <div class="plan-name">12 месяцев</div>
+        <div>
+          <div class="plan-price">1199 <small>₽</small></div>
+          <div class="plan-per">100 ₽/мес</div>
+        </div>
+      </div>
+      <div class="plan-badge best">max save −33%</div>
+    </div>
+
+    <button class="btn" id="buyBtn" onclick="buyPlan()">
+      Оплатить 699 ₽
+    </button>
+
+  </section>
+
+  <!-- ═══ PAGE: PROFILE ════════════════════════════════════ -->
+  <section id="page-profile" class="page">
+    <div id="profileContent">
+      <div style="text-align:center;padding:32px 0">
+        <span class="spinner"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PAGE: INFO ═══════════════════════════════════════ -->
+  <section id="page-info" class="page">
+
+    <div class="card">
+      <div class="section-label" style="margin-bottom:12px">О сервисе</div>
+      <ul class="feat-list">
+        <li>Протокол VLESS + Reality — необнаруживаем</li>
+        <li>Серверы в Германии, Нидерландах, Финляндии</li>
+        <li>До 2 устройств одновременно</li>
+        <li>Без ограничений трафика</li>
+        <li>Нулевые логи — приватность гарантирована</li>
+        <li>Поддержка 24/7 в Telegram</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="section-label" style="margin-bottom:12px">Приложения</div>
+      <ul class="feat-list">
+        <li>Android — v2rayNG</li>
+        <li>iOS — Streisand / Shadowrocket</li>
+        <li>Windows — Hiddify / v2rayN</li>
+        <li>macOS — Hiddify</li>
+      </ul>
+    </div>
+
+    <button class="btn btn-ghost" onclick="openSupport()">
+      Написать в поддержку
+    </button>
+
+  </section>
+
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── Telegram WebApp init ──────────────────────────────────
+const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
+
+const USER = tg.initDataUnsafe?.user || {};
+
+// ── Plans data ────────────────────────────────────────────
+const PLANS = {
+  '1m' : {label:'1 месяц',   price:149,  days:30},
+  '3m' : {label:'3 месяца',  price:399,  days:90},
+  '6m' : {label:'6 месяцев', price:699,  days:180},
+  '12m': {label:'12 месяцев',price:1199, days:365},
+};
+
+let selectedPlan = '6m';
+
+// ── Nav ───────────────────────────────────────────────────
+function switchPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  btn.classList.add('active');
+
+  if (id === 'profile') loadProfile();
+}
+
+// ── Plan selection ────────────────────────────────────────
+function selectPlan(el) {
+  document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedPlan = el.dataset.key;
+  const p = PLANS[selectedPlan];
+  document.getElementById('buyBtn').textContent = `Оплатить ${p.price} ₽`;
+}
+
+// ── Buy ───────────────────────────────────────────────────
+function buyPlan() {
+  if (!USER.id) { showToast('Открой через Telegram'); return; }
+  tg.sendData(JSON.stringify({action:'buy', plan: selectedPlan}));
+  showToast('Запрос отправлен…');
+}
+
+// ── Profile ───────────────────────────────────────────────
+async function loadProfile() {
+  const container = document.getElementById('profileContent');
+  container.innerHTML = '<div style="text-align:center;padding:32px 0"><span class="spinner"></span></div>';
+
+  // Запрашиваем данные у бота через sendData
+  // В реальном проекте — API-запрос на backend
+  // Здесь — заглушка с localStorage-кэшем
+  const cached = localStorage.getItem('vpn_sub');
+  if (cached) {
+    renderProfile(JSON.parse(cached));
+    return;
+  }
+  renderEmptyProfile(container);
+}
+
+function renderProfile(sub) {
+  const container = document.getElementById('profileContent');
+  const exp = new Date(sub.expires_at);
+  const now = new Date();
+  const daysLeft = Math.max(0, Math.ceil((exp - now) / 86400000));
+  const totalDays = PLANS[sub.plan_key]?.days || 30;
+  const pct = Math.min(100, Math.round((daysLeft / totalDays) * 100));
+
+  container.innerHTML = `
+    <div class="card">
+      <div class="section-label" style="margin-bottom:12px">Статус подписки</div>
+      <div class="info-row">
+        <span class="info-key">Тариф</span>
+        <span class="info-val">${PLANS[sub.plan_key]?.label || sub.plan_key}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Действует до</span>
+        <span class="info-val">${exp.toLocaleDateString('ru-RU')}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Осталось</span>
+        <span class="info-val">${daysLeft} дн.</span>
+      </div>
+      <div class="expiry-bar-wrap">
+        <div class="expiry-bar-track">
+          <div class="expiry-bar-fill" style="width:${pct}%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label" style="margin-bottom:10px">VPN ключ</div>
+      <div class="key-block" id="vpnKey">
+        ${sub.vpn_key}
+        <button class="copy-btn" onclick="copyKey()">copy</button>
+      </div>
+    </div>
+
+    <button class="btn btn-ghost" style="margin-top:4px" onclick="switchPage('shop', document.querySelector('[data-page=shop]'))">
+      Продлить подписку
+    </button>
+  `;
+}
+
+function renderEmptyProfile(container) {
+  container.innerHTML = `
+    <div class="empty-state">
+      <div class="big">○</div>
+      <p>Активных подписок нет</p>
+    </div>
+    <button class="btn" onclick="switchPage('shop', document.querySelector('[data-page=shop]'))">
+      Выбрать тариф
+    </button>
+  `;
+}
+
+function copyKey() {
+  const key = document.getElementById('vpnKey').textContent.trim().replace('copy','').trim();
+  navigator.clipboard.writeText(key).then(() => showToast('Ключ скопирован'));
+}
+
+// ── Support ───────────────────────────────────────────────
+function openSupport() {
+  tg.openTelegramLink('https://t.me/your_support_username');
+}
+
+// ── Toast ─────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── WebApp data from bot ──────────────────────────────────
+// Слушаем сообщения от бота (можно расширить)
+tg.onEvent('viewportChanged', () => {});
+
+// Если бот передал данные через start_param — парсим подписку
+const startParam = tg.initDataUnsafe?.start_param || '';
+if (startParam.startsWith('sub_')) {
+  try {
+    const sub = JSON.parse(atob(startParam.replace('sub_','')));
+    localStorage.setItem('vpn_sub', JSON.stringify(sub));
+  } catch(e){}
+}
+</script>
+</body>
+</html>
