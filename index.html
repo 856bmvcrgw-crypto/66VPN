@@ -313,6 +313,9 @@ tg.expand();
 
 const USER = tg.initDataUnsafe?.user || {};
 
+// API URL передаётся ботом через ?api=https://...
+const API_URL = new URLSearchParams(window.location.search).get('api') || '';
+
 // ── Plans data ────────────────────────────────────────────
 const PLANS = {
   '1m' : {label:'1 месяц',   price:199,  days:30},
@@ -343,26 +346,42 @@ function selectPlan(el) {
 }
 
 // ── Buy ───────────────────────────────────────────────────
-function buyPlan() {
+async function buyPlan() {
   const btn = document.getElementById('buyBtn');
-  btn.disabled = true;
-  btn.textContent = 'Переходим…';
 
-  // Открываем бота с параметром выбранного тарифа
-  // Бот обработает /start buy_6m и пришлёт ссылку на оплату
-  const botUrl = `https://t.me/my66vpn_bot?start=buy_${selectedPlan}`;
-
-  if (tg && tg.openTelegramLink) {
-    tg.openTelegramLink(botUrl);
-  } else {
-    window.location.href = botUrl;
+  // Если нет API URL — значит открыто не через бота
+  if (!API_URL || !USER.id) {
+    tg.openTelegramLink('https://t.me/my66vpn_bot');
+    return;
   }
 
-  setTimeout(() => {
-    btn.disabled = false;
-    const p = PLANS[selectedPlan];
-    btn.textContent = `Оплатить ${p.price} ₽`;
-  }, 2000);
+  btn.disabled = true;
+  btn.textContent = '⏳ Создаю платёж…';
+
+  try {
+    const resp = await fetch(
+      `${API_URL}/api/payment/create?tg_id=${USER.id}&plan=${selectedPlan}`
+    );
+    const data = await resp.json();
+
+    if (!data.ok || !data.url) {
+      throw new Error(data.error || 'no url');
+    }
+
+    // Открываем страницу оплаты Freekassa прямо в WebApp
+    tg.openLink(data.url);
+    showToast('Переходим к оплате…');
+
+  } catch (e) {
+    showToast('Ошибка — попробуй через /buy в боте');
+    console.error(e);
+  } finally {
+    setTimeout(() => {
+      btn.disabled = false;
+      const p = PLANS[selectedPlan];
+      btn.textContent = `Оплатить ${p.price} ₽`;
+    }, 2500);
+  }
 }
 
 // ── Profile ───────────────────────────────────────────────
