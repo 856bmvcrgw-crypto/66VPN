@@ -157,6 +157,7 @@ nav button.active::after{content:'';position:absolute;bottom:-1px;left:0;right:0
     <!-- Payment method selector -->
     <div class="section-label">Способ оплаты</div>
     <div class="pay-tabs">
+      <button class="pay-tab" data-method="card" onclick="selectMethod(this)">💳 Карта/СБП</button>
       <button class="pay-tab active" data-method="stars" onclick="selectMethod(this)">⭐ Stars</button>
       <button class="pay-tab" data-method="crypto" onclick="selectMethod(this)">💎 USDT</button>
     </div>
@@ -215,7 +216,7 @@ const PLANS = {
 };
 
 let selectedPlan   = '6m';
-let selectedMethod = 'stars';
+let selectedMethod = 'card';
 
 // ── Nav ───────────────────────────────────────────────────────
 function switchPage(id, btn) {
@@ -246,11 +247,12 @@ function resetBuyBtn() {
   const btn = document.getElementById('buyBtn');
   const p = PLANS[selectedPlan];
   btn.disabled = false;
-  if (selectedMethod === 'stars') {
-    btn.innerHTML = '';
+  btn.innerHTML = '';
+  if (selectedMethod === 'card') {
+    btn.textContent = '💳 Оплатить ' + p.price + ' ₽';
+  } else if (selectedMethod === 'stars') {
     btn.textContent = '⭐ Оплатить ' + p.xtr + ' XTR';
   } else {
-    btn.innerHTML = '';
     btn.textContent = '💎 Оплатить ' + p.usdt + ' USDT';
   }
 }
@@ -259,11 +261,36 @@ function resetBuyBtn() {
 async function buyPlan() {
   const btn = document.getElementById('buyBtn');
 
-  // Если кнопка уже стала ссылкой — пусть ссылка открывается
+  // Если кнопка уже стала ссылкой — пусть браузер открывает её
   if (btn.querySelector('a')) return;
 
   if (!USER.id) {
     tg.openTelegramLink('https://t.me/my66vpn_bot');
+    return;
+  }
+
+  // ─ Карта / СБП (Freekassa) ───────────────────────────────────
+  if (selectedMethod === 'card') {
+    if (!API_URL) {
+      tg.openTelegramLink('https://t.me/my66vpn_bot?start=buy_' + selectedPlan);
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = '⏳ Создаю ссылку…';
+    try {
+      const resp = await fetch(API_URL + '/api/payment/create?tg_id=' + USER.id + '&plan=' + selectedPlan);
+      const data = await resp.json();
+      if (!data.ok || !data.url) throw new Error(data.error || 'no url');
+      btn.disabled = false;
+      btn.innerHTML = '<a href="' + data.url + '" target="_blank" ' +
+        'style="color:#000;text-decoration:none;display:block;width:100%;padding:0">' +
+        '💳 ПЕРЕЙТИ К ОПЛАТЕ' +
+        '</a>';
+      showToast('Ссылка готова — нажми ещё раз');
+    } catch(e) {
+      console.error(e);
+      tg.openTelegramLink('https://t.me/my66vpn_bot?start=buy_' + selectedPlan);
+    }
     return;
   }
 
@@ -333,38 +360,4 @@ function renderProfile(sub) {
       <div class="section-label" style="margin-bottom:10px">VPN ключ</div>
       <div class="key-block" id="vpnKey">${sub.vpn_key}<button class="copy-btn" onclick="copyKey()">copy</button></div>
     </div>
-    <button class="btn btn-ghost" style="margin-top:4px" onclick="switchPage('shop',document.querySelector('[data-page=shop]'))">Продлить подписку</button>`;
-}
-
-function renderEmptyProfile(container) {
-  container.innerHTML = `
-    <div class="empty-state"><div class="big">○</div><p>Активных подписок нет</p></div>
-    <button class="btn" onclick="switchPage('shop',document.querySelector('[data-page=shop]'))">Выбрать тариф</button>`;
-}
-
-function copyKey() {
-  const key = document.getElementById('vpnKey').textContent.trim().replace('copy','').trim();
-  navigator.clipboard.writeText(key).then(() => showToast('Ключ скопирован'));
-}
-
-function openSupport() {
-  tg.openTelegramLink('https://t.me/befirst66');
-}
-
-let toastTimer;
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
-}
-
-tg.onEvent('viewportChanged', () => {});
-const startParam = tg.initDataUnsafe?.start_param || '';
-if (startParam.startsWith('sub_')) {
-  try { localStorage.setItem('vpn_sub', JSON.stringify(JSON.parse(atob(startParam.replace('sub_',''))))); } catch(e){}
-}
-</script>
-</body>
-</html>
+    <button class="btn btn-ghost" style="margin-top:4px" onclick="switchPage('shop',document.querySelector('[da
